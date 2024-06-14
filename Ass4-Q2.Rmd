@@ -1,0 +1,128 @@
+
+
+#Loading Dataset
+
+```{r}
+r_df = read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv", header=TRUE, sep=";")
+w_df = read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv", header=TRUE, sep=";")
+```
+
+
+# Create 80-20 Split
+
+```{r}
+library(ggplot2)
+library(lattice)
+library(caret)
+
+r_index = createDataPartition(r_df$quality, p =0.80, list=FALSE)
+w_index = createDataPartition(r_df$quality, p =0.80, list=FALSE)
+
+rw_train = r_df[r_index,]
+rw_test = r_df[-r_index,]
+
+ww_train = w_df[w_index,]
+ww_test = w_df[-w_index,]
+```
+
+
+# Induce Decision Tree for Both Wines while targetting Quality as the output variable.
+
+
+```{r}
+library(rpart)
+
+rw_train$quality = factor(rw_train$quality)
+rw_test$quality = factor(rw_test$quality)
+
+ww_train$quality = factor(ww_train$quality)
+ww_test$quality = factor(ww_test$quality)
+
+redwine_decisiontree = rpart(quality ~ . , data=rw_train, method="class") 
+whitewine_decisiontree =  rpart(quality ~ . , data=ww_train , method="class") 
+```
+
+
+```{r}
+library(rpart.plot)
+rpart.plot(redwine_decisiontree)
+```
+
+```{r}
+rpart.plot(whitewine_decisiontree)
+```
+
+
+# Confusion Matrix and Accuracies
+
+
+```{r}
+redwine_predict = predict(redwine_decisiontree, newdata = rw_test, type='class')
+whitewine_predict = predict(whitewine_decisiontree, newdata = ww_test, type='class')
+redwine_dt_cm = confusionMatrix(table(redwine_predict,rw_test$quality))
+whitewine_dt_cm = confusionMatrix(table(ww_test$quality, whitewine_predict ))
+```
+
+```{r}
+redwine_dt_cm
+```
+
+```{r}
+whitewine_dt_cm
+```
+
+
+```{r}
+rpart.plot(redwine_decisiontree, digits = 4, fallen.leaves = TRUE, type = 4)
+```
+
+```{r}
+rpart.plot(whitewine_decisiontree, digits = 4, fallen.leaves = TRUE, type = 4)
+```
+
+```{r}
+varImp(whitewine_decisiontree)
+```
+
+```{r}
+varImp(redwine_decisiontree)
+```
+
+# Repeat using Random Forest and comparing results
+
+
+```{r}
+library(randomForest)
+library(ggplot2)
+redwine_randomforest = randomForest(quality ~ . , data=rw_train)
+whitewine_randomforest = randomForest(quality ~ . , data=ww_train)
+```
+
+```{r}
+redwine_randomforest_predict = predict(redwine_randomforest, newdata = rw_test)
+whitewine_randomforest_predict = predict(redwine_randomforest, newdata = ww_test)
+```
+
+```{r}
+library(caret)
+redwine_rf_cm = confusionMatrix(table(redwine_randomforest_predict, rw_test$quality))
+redwine_rf_cm
+```
+
+
+```{r}
+whitewine_rf_cm = confusionMatrix(table(ww_test$quality, whitewine_randomforest_predict ))
+whitewine_rf_cm
+```
+
+```{r}
+cat("Random Forest- Red Wine Accuracy : ",redwine_rf_cm$overall['Accuracy'])
+cat("\nDecision Tree- Red Wine Accuracy : ", redwine_dt_cm$overall['Accuracy'])
+```
+
+
+```{r}
+cat("Random Forest- White Wine Accuracy : ",whitewine_rf_cm$overall['Accuracy'])
+cat("\nDecision Tree- White Wine Accuracy : ", whitewine_dt_cm$overall['Accuracy'])
+```
+

@@ -1,0 +1,133 @@
+
+# Setting up the dataframe
+
+```{r}
+df1 = data.frame(datapoints = rnorm(300, 5,2), class=rep(1,300))
+df2 = data.frame(datapoints = rnorm(300, -5,2), class=rep(0,300))
+df = rbind(df1,df2)
+```
+
+```{r}
+library(rpart)
+library(rpart.plot)
+df$class = as.factor(df$class)
+bdt_df = rpart(class ~ ., data=df)
+rpart.plot(bdt_df)
+```
+
+Threshold Value in first split is 0.46
+
+
+Empirical Distribution of the feature is as below.
+
+```{r}
+plot(ecdf(df$datapoints))
+```
+
+Root node = 1
+Leaf nodes = 2
+
+
+```{r}
+tail(bdt_df$cptable[,'nsplit'],1)
+```
+
+
+# Finding entropy and Gini Values
+
+
+```{r}
+calc_gini_index = function(prob)
+{
+  gi = 2 * (prob) * (1  - prob)
+  return (gi)
+}
+
+
+entropy <- function(prob)
+{
+  
+ entropy_val = (prob * log(prob) + (1 - prob) * log(1 - prob))
+ 
+ return (entropy_val)
+ 
+}
+```
+
+
+```{r}
+prob = c(0.5, 0, 1)
+gi = sapply(prob, calc_gini_index)
+gi
+```
+
+
+Entropy is 0.5
+
+
+```{r}
+entropy_val = sapply(prob, entropy)
+entropy_val
+```
+
+Gini is -0.6931472
+
+# Repeating for N.D of (1,2) and (-1,2)
+
+```{r}
+temp1 = data.frame(datapoints= rnorm(300, 1,2), class=rep(1,300))
+temp2 = data.frame(datapoints = rnorm(300, -1,2), class=rep(0,300))
+df2 = rbind(temp1,temp2)
+```
+
+```{r}
+library(rpart)
+library(rpart.plot)
+df2$class = as.factor(df2$class)
+bdt_df2 = rpart(class ~ ., data=df2)
+rpart.plot(bdt_df2)
+```
+
+Two leafs and 1 Root Node.
+
+```{r}
+tail(bdt_df2$cptable[,'nsplit'],1)
+```
+
+```{r}
+prob2 = c(0.5, 0.22, 0.64, 0.57, 0.51,0.14,0.58,0.51,0.33,0.64,0.68,0.61,0.29,0.63,0.87)
+gi = sapply(prob2, calc_gini_index)
+gi
+```
+
+```{r}
+entropy_val = sapply(prob2, entropy)
+entropy_val
+```
+
+
+# Pruning
+
+```{r}
+bdt_df2$cptable[which.min(bdt_df2$cptable[,"xerror"]),"CP"]
+prunetree = prune(bdt_df2, cp=0.1)
+prunetree
+```
+
+```{r}
+library(rpart.plot)
+rpart.plot(prunetree)
+```
+
+```{r}
+prob3 = c(0.5, 0.22, 0.64)
+gi = sapply(prob3, calc_gini_index)
+gi
+```
+
+```{r}
+entropy_val = sapply(prob3, entropy)
+entropy_val
+```
+
+The tree seems to be the same even after pruning.

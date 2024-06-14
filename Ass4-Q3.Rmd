@@ -1,0 +1,122 @@
+
+
+# Loading SMS Spam Dataset
+
+```{r}
+ss_df = read.csv("SMSSpamCollection", sep="\t", stringsAsFactors = FALSE,header=FALSE, quote="")
+colnames(ss_df) = c('type', 'message')
+```
+
+
+# Creating Corpus
+
+
+```{r}
+library(tm)
+library(ggplot2)
+library(caret)
+ss_df$type = factor(ss_df$type) 
+ss_corpus = VCorpus(VectorSource(ss_df$message))
+ss_corpus
+```
+
+
+# Applying Transformations on the Corpus
+
+
+```{r}
+ss_corpus = tm_map(ss_corpus,content_transformer(tolower))
+```
+
+
+```{r}
+ss_corpus = tm_map(ss_corpus, removeWords ,stopwords('english'))
+```
+
+
+```{r}
+ss_corpus = tm_map(ss_corpus, stripWhitespace)
+```
+
+
+```{r}
+ss_corpus = tm_map(ss_corpus, removePunctuation)
+```
+
+
+```{r}
+as.character(ss_corpus[1:3])
+```
+
+
+```{r}
+dtm_ss = DocumentTermMatrix(ss_corpus)
+dtm_ss
+```
+
+```{r}
+ss_train = dtm_ss[0:4000,]
+ss_test = dtm_ss[4000:5574,]
+```
+
+
+```{r}
+smspam_train_labels = ss_df[0:4000,]$type
+smspam_test_labels = ss_df[4000:5574,]$type
+```
+
+
+#Construct Features from Words that have more than 10 occurances and Split the Data
+
+
+```{r}
+smsspam_freqterm = findFreqTerms(ss_train,10)
+```
+
+
+#Boolean Representation
+
+
+```{r}
+freq_terms_sms_train = ss_train[,smsspam_freqterm]
+freq_terms_sms_test = ss_test[,smsspam_freqterm]
+
+convert_binary <- function(x){
+  x <- ifelse(x > 0, 1, 0)
+}
+
+ss_train = apply(freq_terms_sms_train, MARGIN = 2, convert_binary)
+ss_test =  apply(freq_terms_sms_test, MARGIN = 2, convert_binary) 
+```
+
+
+# Fit to SVM Model
+
+
+```{r}
+library(e1071)
+smsspam_svm_model = svm(smspam_train_labels ~. , data=ss_train)
+print(smsspam_svm_model)
+```
+
+
+```{r}
+smsspam_svm_train_pred = predict(smsspam_svm_model, ss_train)
+smsspam_svm_test_pred = predict(smsspam_svm_model, ss_test)
+```
+
+
+```{r}
+ss_train_cm = confusionMatrix(smsspam_svm_train_pred,smspam_train_labels)
+ss_test_cm = confusionMatrix(smsspam_svm_test_pred,smspam_test_labels)
+```
+
+
+```{r}
+ss_train_accuracy = ss_train_cm$overall[1]
+cat("Train dataset Accuracy :", ss_train_accuracy)
+
+ss_test_accuracy = ss_test_cm$overall[1]
+cat("\nTest dataset Accuracy :", ss_test_accuracy)
+```
+
